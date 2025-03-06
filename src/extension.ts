@@ -1,39 +1,48 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log('Congratulations, your extension "blocky" is now active!');
-
   const editor = vscode.window.activeTextEditor;
-  if (!editor) {
-    return;
+  if (!editor) return;
+
+  function getUserSettings(): { keyword: string; color: string }[] {
+    return vscode.workspace
+      .getConfiguration()
+      .get('sectionHighlighter.rules', []);
   }
 
-  const decorationType = vscode.window.createTextEditorDecorationType({
-    backgroundColor: 'rgba(255, 215, 0, 0.08)',
-    isWholeLine: true,
-    overviewRulerColor: 'rgba(255, 215, 0, 0.2)',
-    overviewRulerLane: vscode.OverviewRulerLane.Center,
-  });
+  let decorationTypes: { [key: string]: vscode.TextEditorDecorationType } = {};
 
   function updateDecorations() {
-    if (!editor) {
-      return;
-    }
-
+    if (!vscode.window.activeTextEditor) return;
+    const editor = vscode.window.activeTextEditor;
     const doc = editor.document;
     const text = doc.getText();
+    const settings = getUserSettings();
+
+    // Clear existing decorations
+    Object.values(decorationTypes).forEach((decorationType) => {
+      editor.setDecorations(decorationType, []);
+    });
+
+    let decorations: { [key: string]: vscode.DecorationOptions[] } = {};
+
+    // Create and reuse decoration types
+    settings.forEach(({ keyword, color }) => {
+      if (!decorationTypes[keyword]) {
+        decorationTypes[keyword] = vscode.window.createTextEditorDecorationType(
+          {
+            backgroundColor: color,
+            isWholeLine: true,
+          }
+        );
+      }
+      decorations[keyword] = [];
+    });
 
     const regex = /\/\/\s*------\s*(.*?)\s*------/g;
     let match;
-    let ranges: vscode.DecorationOptions[] = [];
-
     while ((match = regex.exec(text))) {
+      const matchedKeyword = match[1].trim();
       const start = doc.positionAt(match.index);
       let end = start;
 
@@ -42,18 +51,23 @@ export function activate(context: vscode.ExtensionContext) {
         break;
       }
 
-      ranges.push({ range: new vscode.Range(start, end) });
+      if (decorations[matchedKeyword]) {
+        decorations[matchedKeyword].push({
+          range: new vscode.Range(start, end),
+        });
+      }
     }
 
-    console.log('matches', ranges);
-
-    editor.setDecorations(decorationType, ranges);
+    // Apply decorations
+    Object.entries(decorationTypes).forEach(([keyword, decorationType]) => {
+      editor.setDecorations(decorationType, decorations[keyword] || []);
+    });
   }
 
   vscode.workspace.onDidChangeTextDocument(updateDecorations);
   vscode.window.onDidChangeActiveTextEditor(updateDecorations);
+  vscode.workspace.onDidChangeConfiguration(updateDecorations);
   updateDecorations();
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}

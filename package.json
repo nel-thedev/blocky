@@ -19,7 +19,40 @@
         "command": "blocky.helloWorld",
         "title": "Hello World"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Section Highlighter",
+      "properties": {
+        "sectionHighlighter.rules": {
+          "type": "array",
+          "description": "Defines keywords and their associated highlight colors.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "keyword": {
+                "type": "string",
+                "description": "The keyword inside the comment section."
+              },
+              "color": {
+                "type": "string",
+                "description": "The background color for the section.",
+                "default": "rgba(255, 215, 0, 0.2)"
+              }
+            }
+          },
+          "default": [
+            {
+              "keyword": "GraphQL",
+              "color": "rgba(255, 182, 193, 0.3)"
+            },
+            {
+              "keyword": "TODO",
+              "color": "rgba(173, 216, 230, 0.3)"
+            }
+          ]
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
